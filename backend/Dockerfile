@@ -5,13 +5,16 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files first (layer caching — only reinstalls when deps change)
-COPY package.json package-lock.json* ./
+COPY backend/package.json package-lock.json* ./
 
 # Install production dependencies only
 RUN npm install --omit=dev
 
 # Copy the rest of the backend source
-COPY . .
+COPY backend/ .
+
+#Copy frontend code
+COPY frontend/ ./frontend
 
 # Expose the port the app runs on
 EXPOSE 5000
