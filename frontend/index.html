@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SNIP — URL Shortener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Background decorations -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="wrapper">
+      <!-- Header -->
+      <header>
+        <div class="logo-row">
+          <div class="logo-mark">
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8 3H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-3"
+                stroke="#0a0a0f"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M13 2h5v5"
+                stroke="#0a0a0f"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M18 2L10 10"
+                stroke="#0a0a0f"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div class="logo-text">SNIP</div>
+        </div>
+        <div class="tagline">URL shortener &mdash; DevOps project build</div>
+      </header>
+
+      <!-- Main card -->
+      <div class="card">
+        <!-- Window chrome -->
+        <div class="card-header">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+          <div class="card-title">shorten.url — local:5000</div>
+        </div>
+
+        <div class="card-body">
+          <!-- Input -->
+          <label class="input-label" for="url-input">Paste a long URL</label>
+          <div class="input-group">
+            <input
+              id="url-input"
+              class="url-input"
+              type="url"
+              placeholder="https://example.com/very/long/url/that/needs/shortening"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button class="btn-shorten" id="btn-shorten">Shorten →</button>
+          </div>
+
+          <!-- Result banner -->
+          <div class="result-banner" id="result-banner">
+            <div class="result-left">
+              <span class="result-pill">READY</span>
+              <span class="result-url" id="result-url"></span>
+            </div>
+            <button class="btn-copy" id="btn-copy">
+              <span id="copy-icon">⎘</span>
+              <span id="copy-text">Copy</span>
+            </button>
+          </div>
+
+          <!-- Divider -->
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">Recent links</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <!-- History table -->
+          <div class="history-header">
+            <div>Original URL</div>
+            <div>Short link</div>
+            <div style="text-align: right">Actions</div>
+          </div>
+
+          <div class="history-list" id="history-list">
+            <div class="empty-state" id="empty-state">
+              <div class="empty-icon">⊘</div>
+              <div>No links yet — shorten your first URL above</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="stats-bar">
+          <div class="stat">
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-label">Links created</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="stat-clicks">0</div>
+            <div class="stat-label">Redirects</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="stat-saved">0</div>
+            <div class="stat-label">Chars saved</div>
+          </div>
+        </div>
+      </div>
+      <!-- /.card -->
+
+      <footer>
+        Built with Flask &middot; PostgreSQL &middot; Docker &middot; GitHub
+        Actions &middot; <span>AWS EC2</span>
+      </footer>
+    </div>
+    <!-- /.wrapper -->
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
