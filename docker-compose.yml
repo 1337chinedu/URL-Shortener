@@ -21,9 +21,7 @@ services:
 
   # ── Node.js backend ─────────────────────────────
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: gregzone/snip-backend:latest  
     container_name: snip_backend
     restart: unless-stopped
     env_file: .env
@@ -38,10 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      # Serve the frontend folder as static files
-      - ./frontend:/app/frontend
-
+    
   # ── Nginx reverse proxy ─────────────────────────
   nginx:
     image: nginx:alpine

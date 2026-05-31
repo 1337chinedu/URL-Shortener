@@ -32,7 +32,7 @@ async function initDB() {
 
 /* ── Middleware ── */
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../frontend")));
+app.use(express.static(path.join(__dirname, "frontend")));
 
 /* ── Routes ── */
 
