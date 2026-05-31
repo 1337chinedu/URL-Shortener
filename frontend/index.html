@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Background decorations -->
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
 
@@ -54,12 +53,13 @@
 
       <!-- Main card -->
       <div class="card">
-        <!-- Window chrome -->
         <div class="card-header">
           <div class="dot dot-r"></div>
           <div class="dot dot-y"></div>
           <div class="dot dot-g"></div>
-          <div class="card-title">shorten.url — local:5000</div>
+          <div class="card-title">
+            shorten.url &mdash; powered by Node.js + PostgreSQL
+          </div>
         </div>
 
         <div class="card-body">
@@ -119,7 +119,7 @@
           </div>
           <div class="stat">
             <div class="stat-value" id="stat-clicks">0</div>
-            <div class="stat-label">Redirects</div>
+            <div class="stat-label">Total redirects</div>
           </div>
           <div class="stat">
             <div class="stat-value" id="stat-saved">0</div>
@@ -127,16 +127,13 @@
           </div>
         </div>
       </div>
-      <!-- /.card -->
 
       <footer>
-        Built with Flask &middot; PostgreSQL &middot; Docker &middot; GitHub
+        Built with Node.js &middot; PostgreSQL &middot; Docker &middot; GitHub
         Actions &middot; <span>AWS EC2</span>
       </footer>
     </div>
-    <!-- /.wrapper -->
 
-    <!-- Toast notification -->
     <div class="toast" id="toast"></div>
 
     <script src="app.js"></script>

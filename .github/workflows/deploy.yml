@@ -1,0 +1,53 @@
+name: Deploy SNIP to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout the repository ──────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. SSH into EC2 and deploy ──────────────────────
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+
+            # ── Clone repo on first deploy, pull on subsequent ones ──
+            if [ ! -d "/home/ubuntu/snip-url" ]; then
+              git clone https://github.com/${{ github.repository }}.git /home/ubuntu/snip-url
+            fi
+
+            cd /home/ubuntu/snip-url
+            git pull origin main
+
+            # ── Write the .env file from GitHub Secrets ──
+            cat > .env <<EOF
+            DB_HOST=db
+            DB_PORT=5432
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            PORT=5000
+            BASE_URL=http://${{ secrets.EC2_HOST }}
+            EOF
+
+            # ── Stop old containers, rebuild, start fresh ──
+            docker compose down --remove-orphans
+            docker compose up -d --build
+
+            # ── Clean up unused Docker images to save disk space ──
+            docker image prune -f
+
+            echo "✅ Deployment complete — http://${{ secrets.EC2_HOST }}"

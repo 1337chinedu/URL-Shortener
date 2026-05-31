@@ -1,31 +1,25 @@
 /* =============================================
-   SNIP — URL Shortener Logic
-   File: app.js
+   SNIP — URL Shortener Frontend Logic
+   File: frontend/static/app.js
+   All data comes from the Node.js + PostgreSQL backend.
    ============================================= */
 
-const BASE = "http://localhost";
+/* ── DOM references ── */
+const urlInput = document.getElementById("url-input");
+const btnShorten = document.getElementById("btn-shorten");
+const btnCopy = document.getElementById("btn-copy");
+const resultBanner = document.getElementById("result-banner");
+const resultUrl = document.getElementById("result-url");
+const copyText = document.getElementById("copy-text");
+const historyList = document.getElementById("history-list");
+const emptyState = document.getElementById("empty-state");
+const toast = document.getElementById("toast");
+const statTotal = document.getElementById("stat-total");
+const statClicks = document.getElementById("stat-clicks");
+const statSaved = document.getElementById("stat-saved");
 
-/* ---------- State ---------- */
-let links = JSON.parse(localStorage.getItem("snip_links") || "[]");
-let totalClicks = parseInt(localStorage.getItem("snip_clicks") || "0");
-
-/* ---------- Persistence ---------- */
-function save() {
-  localStorage.setItem("snip_links", JSON.stringify(links));
-  localStorage.setItem("snip_clicks", totalClicks);
-}
-
-/* ---------- Helpers ---------- */
-function generateCode() {
-  const chars =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from(
-    { length: 6 },
-    () => chars[Math.floor(Math.random() * chars.length)],
-  ).join("");
-}
-
-function formatUrl(url) {
+/* ── Helpers ── */
+function formatHostname(url) {
   try {
     return new URL(url).hostname + "…";
   } catch {
@@ -33,177 +27,194 @@ function formatUrl(url) {
   }
 }
 
-/* ---------- Shorten ---------- */
+function showToast(msg, isError = false) {
+  toast.textContent = msg;
+  toast.style.borderColor = isError ? "var(--danger)" : "var(--accent)";
+  toast.style.color = isError ? "var(--danger)" : "var(--accent)";
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2400);
+}
+
+/* ── Shorten a URL ── */
 async function shortenURL() {
-  const input = document.getElementById("url-input");
-  const btn = document.getElementById("btn-shorten");
-  const url = input.value.trim();
+  const url = urlInput.value.trim();
+
+  urlInput.classList.remove("error");
 
   if (!url) {
-    showToast("Please enter a URL first");
+    showToast("Please enter a URL first", true);
+    urlInput.classList.add("error");
     return;
   }
 
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    showToast("URL must start with http:// or https://");
+  // Basic client-side validation before hitting the server
+  try {
+    new URL(url);
+  } catch {
+    showToast("URL must start with http:// or https://", true);
+    urlInput.classList.add("error");
     return;
   }
 
-  /* Loading state */
-  btn.textContent = "...";
-  btn.classList.add("loading");
-  btn.disabled = true;
+  // Loading state
+  btnShorten.textContent = "...";
+  btnShorten.classList.add("loading");
+  btnShorten.disabled = true;
 
-  /* Simulates network latency.
-     In production, replace with a real API call:
+  try {
+    const res = await fetch("/api/shorten", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
 
-     const res  = await fetch('/shorten', {
-       method:  'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body:    JSON.stringify({ url })
-     });
-     const data = await res.json();
-     const code = data.short_code;
-  */
-  await new Promise((r) => setTimeout(r, 600));
+    const data = await res.json();
 
-  const code = generateCode();
-  const shortUrl = `${BASE}/${code}`;
+    if (!res.ok) {
+      showToast(data.error || "Something went wrong", true);
+      return;
+    }
 
-  const entry = {
-    id: Date.now(),
-    original: url,
-    short: shortUrl,
-    code,
-    clicks: 0,
-    created: new Date().toLocaleTimeString(),
-  };
+    // Show result banner
+    resultUrl.textContent = data.short_url;
+    copyText.textContent = "Copy";
+    btnCopy.classList.remove("copied");
+    resultBanner.classList.add("visible");
 
-  links.unshift(entry);
-  save();
-  updateStats();
-  renderHistory();
-  showResult(shortUrl);
+    urlInput.value = "";
+    showToast("Short link created!");
 
-  input.value = "";
-  btn.textContent = "Shorten →";
-  btn.classList.remove("loading");
-  btn.disabled = false;
-
-  showToast("Link created successfully");
+    // Refresh history from the server
+    loadHistory();
+  } catch (err) {
+    showToast("Network error — is the server running?", true);
+    console.error(err);
+  } finally {
+    btnShorten.textContent = "Shorten →";
+    btnShorten.classList.remove("loading");
+    btnShorten.disabled = false;
+  }
 }
 
-/* ---------- Result banner ---------- */
-function showResult(url) {
-  const banner = document.getElementById("result-banner");
-  document.getElementById("result-url").textContent = url;
-  document.getElementById("copy-text").textContent = "Copy";
-  document.getElementById("btn-copy").classList.remove("copied");
-  banner.classList.add("visible");
-}
-
-/* ---------- Copy ---------- */
+/* ── Copy the result URL ── */
 function copyResult() {
-  const url = document.getElementById("result-url").textContent;
+  const url = resultUrl.textContent;
+  if (!url) return;
+
   navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById("btn-copy");
-    document.getElementById("copy-text").textContent = "Copied!";
-    btn.classList.add("copied");
+    copyText.textContent = "Copied!";
+    btnCopy.classList.add("copied");
     setTimeout(() => {
-      document.getElementById("copy-text").textContent = "Copy";
-      btn.classList.remove("copied");
+      copyText.textContent = "Copy";
+      btnCopy.classList.remove("copied");
     }, 2000);
   });
 }
 
-function copyLink(code) {
-  navigator.clipboard.writeText(`${BASE}/${code}`);
+/* ── Copy any short link from history ── */
+function copyLink(shortCode) {
+  const url = `${window.location.origin}/${shortCode}`;
+  navigator.clipboard.writeText(url);
   showToast("Copied to clipboard");
 }
 
-/* ---------- Delete ---------- */
-function deleteLink(id) {
-  links = links.filter((l) => l.id !== id);
-  save();
-  updateStats();
-  renderHistory();
-  showToast("Link deleted");
-}
+/* ── Delete a short link ── */
+async function deleteLink(shortCode) {
+  try {
+    const res = await fetch(`/api/urls/${shortCode}`, { method: "DELETE" });
 
-/* ---------- Simulate redirect ---------- */
-function simulateClick(id) {
-  const link = links.find((l) => l.id === id);
-  if (link) {
-    link.clicks++;
-    totalClicks++;
-    save();
-    updateStats();
-    renderHistory();
+    if (!res.ok) {
+      const data = await res.json();
+      showToast(data.error || "Could not delete link", true);
+      return;
+    }
+
+    showToast("Link deleted");
+    loadHistory();
+  } catch (err) {
+    showToast("Network error", true);
+    console.error(err);
   }
-  showToast("Redirect simulated");
 }
 
-/* ---------- Stats ---------- */
-function updateStats() {
-  document.getElementById("stat-total").textContent = links.length;
-  document.getElementById("stat-clicks").textContent = totalClicks;
+/* ── Load URL history from the backend ── */
+async function loadHistory() {
+  try {
+    const res = await fetch("/api/urls");
+    const urls = await res.json();
 
-  const saved = links.reduce(
-    (acc, l) => acc + Math.max(0, l.original.length - l.short.length),
-    0,
-  );
-  document.getElementById("stat-saved").textContent =
-    saved > 999 ? (saved / 1000).toFixed(1) + "k" : saved;
+    if (!res.ok) {
+      console.error("Failed to load history");
+      return;
+    }
+
+    renderHistory(urls);
+    updateStats(urls);
+  } catch (err) {
+    console.error("Could not fetch history:", err);
+  }
 }
 
-/* ---------- History render ---------- */
-function renderHistory() {
-  const list = document.getElementById("history-list");
-  const empty = document.getElementById("empty-state");
+/* ── Render the history table ── */
+function renderHistory(urls) {
+  historyList.innerHTML = "";
 
-  if (links.length === 0) {
-    list.innerHTML = "";
-    list.appendChild(empty);
+  if (!urls || urls.length === 0) {
+    historyList.appendChild(emptyState);
     return;
   }
 
-  list.innerHTML = "";
-
-  links.forEach((link, i) => {
+  urls.forEach((link, i) => {
     const item = document.createElement("div");
     item.className = "history-item";
     item.style.animationDelay = `${i * 0.04}s`;
 
     item.innerHTML = `
-      <div class="history-original" title="${link.original}">${formatUrl(link.original)}</div>
-      <div class="history-short"    title="${link.short}">/${link.code}</div>
+      <div class="history-original" title="${link.original_url}">${formatHostname(link.original_url)}</div>
+      <div class="history-short"    title="/${link.short_code}">/${link.short_code}</div>
       <div class="history-actions">
-        <button class="btn-icon"     onclick="copyLink('${link.code}')"    title="Copy">⎘</button>
-        <button class="btn-icon"     onclick="simulateClick(${link.id})"   title="Simulate redirect">↗</button>
-        <button class="btn-icon del" onclick="deleteLink(${link.id})"      title="Delete">✕</button>
+        <button class="btn-icon"     title="Copy link">⎘</button>
+        <button class="btn-icon del" title="Delete">✕</button>
       </div>
     `;
 
-    list.appendChild(item);
+    // Attach listeners to buttons (avoids inline onclick with user data)
+    item
+      .querySelector(".btn-icon:not(.del)")
+      .addEventListener("click", () => copyLink(link.short_code));
+    item
+      .querySelector(".btn-icon.del")
+      .addEventListener("click", () => deleteLink(link.short_code));
+
+    historyList.appendChild(item);
   });
 }
 
-/* ---------- Toast ---------- */
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2200);
+/* ── Update the three stats counters ── */
+function updateStats(urls) {
+  const total = urls.length;
+  const clicks = urls.reduce((acc, l) => acc + (l.clicks || 0), 0);
+  const saved = urls.reduce((acc, l) => {
+    const shortLen = (window.location.origin + "/" + l.short_code).length;
+    return acc + Math.max(0, l.original_url.length - shortLen);
+  }, 0);
+
+  statTotal.textContent = total;
+  statClicks.textContent = clicks;
+  statSaved.textContent = saved > 999 ? (saved / 1000).toFixed(1) + "k" : saved;
 }
 
-/* ---------- Event listeners ---------- */
-document.getElementById("url-input").addEventListener("keydown", (e) => {
+/* ── Event listeners ── */
+btnShorten.addEventListener("click", shortenURL);
+btnCopy.addEventListener("click", copyResult);
+
+urlInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") shortenURL();
 });
 
-document.getElementById("btn-shorten").addEventListener("click", shortenURL);
-document.getElementById("btn-copy").addEventListener("click", copyResult);
+urlInput.addEventListener("input", () => {
+  urlInput.classList.remove("error");
+});
 
-/* ---------- Init ---------- */
-updateStats();
-renderHistory();
+/* ── Init ── */
+loadHistory();

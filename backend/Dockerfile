@@ -1,7 +1,20 @@
-FROM python:3.11-slim
+# ── Stage: production image ──
+FROM node:18-alpine
+
+# Set working directory
 WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
+
+# Copy package files first (layer caching — only reinstalls when deps change)
+COPY package.json package-lock.json* ./
+
+# Install production dependencies only
+RUN npm install --omit=dev
+
+# Copy the rest of the backend source
+COPY . .
+
+# Expose the port the app runs on
 EXPOSE 5000
-CMD ["python", "app.py"]
+
+# Start the server
+CMD ["node", "server.js"]
