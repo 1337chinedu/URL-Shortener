@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # ── PostgreSQL database ──────────────────────────
   db:
@@ -21,7 +19,10 @@ services:
 
   # ── Node.js backend ─────────────────────────────
   backend:
-    image: gregzone/snip-backend:latest  
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # image: gregzone/snip-backend:latest  
     container_name: snip_backend
     restart: unless-stopped
     env_file: .env
