@@ -1,6 +1,6 @@
 /* =============================================
    SNIP — URL Shortener Frontend Logic
-   File: frontend/static/app.js
+   File: frontend/app.js
    All data comes from the Node.js + PostgreSQL backend.
    ============================================= */
 
@@ -21,18 +21,35 @@ const statSaved = document.getElementById("stat-saved");
 /* ── Helpers ── */
 function formatHostname(url) {
   try {
-    return new URL(url).hostname + "…";
+    const { hostname, pathname } = new URL(url);
+    const path = pathname.length > 1 ? pathname.slice(0, 18) + "…" : "";
+    return hostname + path;
   } catch {
-    return url.slice(0, 30) + "…";
+    return url.slice(0, 36) + "…";
   }
 }
 
+let toastTimer;
 function showToast(msg, isError = false) {
+  clearTimeout(toastTimer);
   toast.textContent = msg;
-  toast.style.borderColor = isError ? "var(--danger)" : "var(--accent)";
-  toast.style.color = isError ? "var(--danger)" : "var(--accent)";
+  toast.classList.toggle("error", isError);
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 2400);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
+function animateValue(el, newVal) {
+  el.style.transform = "translateY(-4px)";
+  el.style.opacity = "0";
+  setTimeout(() => {
+    el.textContent = newVal;
+    el.style.transform = "translateY(4px)";
+    setTimeout(() => {
+      el.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+      el.style.transform = "translateY(0)";
+      el.style.opacity = "1";
+    }, 20);
+  }, 150);
 }
 
 /* ── Shorten a URL ── */
@@ -42,22 +59,22 @@ async function shortenURL() {
   urlInput.classList.remove("error");
 
   if (!url) {
-    showToast("Please enter a URL first", true);
+    showToast("Please paste a URL first", true);
     urlInput.classList.add("error");
+    urlInput.focus();
     return;
   }
 
-  // Basic client-side validation before hitting the server
   try {
     new URL(url);
   } catch {
     showToast("URL must start with http:// or https://", true);
     urlInput.classList.add("error");
+    urlInput.focus();
     return;
   }
 
-  // Loading state
-  btnShorten.textContent = "...";
+  /* Loading state */
   btnShorten.classList.add("loading");
   btnShorten.disabled = true;
 
@@ -75,7 +92,7 @@ async function shortenURL() {
       return;
     }
 
-    // Show result banner
+    /* Show result banner */
     resultUrl.textContent = data.short_url;
     copyText.textContent = "Copy";
     btnCopy.classList.remove("copied");
@@ -84,13 +101,11 @@ async function shortenURL() {
     urlInput.value = "";
     showToast("Short link created!");
 
-    // Refresh history from the server
     loadHistory();
   } catch (err) {
     showToast("Network error — is the server running?", true);
     console.error(err);
   } finally {
-    btnShorten.textContent = "Shorten →";
     btnShorten.classList.remove("loading");
     btnShorten.disabled = false;
   }
@@ -104,28 +119,41 @@ function copyResult() {
   navigator.clipboard.writeText(url).then(() => {
     copyText.textContent = "Copied!";
     btnCopy.classList.add("copied");
+    showToast("Copied to clipboard");
     setTimeout(() => {
       copyText.textContent = "Copy";
       btnCopy.classList.remove("copied");
-    }, 2000);
+    }, 2200);
   });
 }
 
 /* ── Copy any short link from history ── */
 function copyLink(shortCode) {
   const url = `${window.location.origin}/${shortCode}`;
-  navigator.clipboard.writeText(url);
-  showToast("Copied to clipboard");
+  navigator.clipboard
+    .writeText(url)
+    .then(() => showToast("Copied to clipboard"));
 }
 
 /* ── Delete a short link ── */
-async function deleteLink(shortCode) {
+async function deleteLink(shortCode, itemEl) {
+  /* Animate row out before the network call for snappier feel */
+  if (itemEl) {
+    itemEl.style.transition = "opacity 0.2s, transform 0.2s";
+    itemEl.style.opacity = "0";
+    itemEl.style.transform = "translateX(8px)";
+  }
+
   try {
     const res = await fetch(`/api/urls/${shortCode}`, { method: "DELETE" });
 
     if (!res.ok) {
       const data = await res.json();
       showToast(data.error || "Could not delete link", true);
+      if (itemEl) {
+        itemEl.style.opacity = "1";
+        itemEl.style.transform = "none";
+      }
       return;
     }
 
@@ -133,6 +161,10 @@ async function deleteLink(shortCode) {
     loadHistory();
   } catch (err) {
     showToast("Network error", true);
+    if (itemEl) {
+      itemEl.style.opacity = "1";
+      itemEl.style.transform = "none";
+    }
     console.error(err);
   }
 }
@@ -167,24 +199,32 @@ function renderHistory(urls) {
   urls.forEach((link, i) => {
     const item = document.createElement("div");
     item.className = "history-item";
-    item.style.animationDelay = `${i * 0.04}s`;
+    item.style.animationDelay = `${i * 0.045}s`;
 
     item.innerHTML = `
       <div class="history-original" title="${link.original_url}">${formatHostname(link.original_url)}</div>
-      <div class="history-short"    title="/${link.short_code}">/${link.short_code}</div>
+      <div class="history-short" title="${window.location.origin}/${link.short_code}">/${link.short_code}</div>
       <div class="history-actions">
-        <button class="btn-icon"     title="Copy link">⎘</button>
-        <button class="btn-icon del" title="Delete">✕</button>
+        <button class="btn-icon" title="Copy link" aria-label="Copy short link">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="4.5" y="4.5" width="7" height="8" rx="1.2" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M2.5 9H2a.8.8 0 01-.8-.8V2a.8.8 0 01.8-.8H8a.8.8 0 01.8.8v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="btn-icon del" title="Delete link" aria-label="Delete short link">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 3.5h10M5.5 3.5V2.5a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1M11 3.5l-.7 7.7a1 1 0 01-1 .8H4.7a1 1 0 01-1-.8L3 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     `;
 
-    // Attach listeners to buttons (avoids inline onclick with user data)
     item
       .querySelector(".btn-icon:not(.del)")
       .addEventListener("click", () => copyLink(link.short_code));
     item
       .querySelector(".btn-icon.del")
-      .addEventListener("click", () => deleteLink(link.short_code));
+      .addEventListener("click", () => deleteLink(link.short_code, item));
 
     historyList.appendChild(item);
   });
@@ -199,9 +239,13 @@ function updateStats(urls) {
     return acc + Math.max(0, l.original_url.length - shortLen);
   }, 0);
 
-  statTotal.textContent = total;
-  statClicks.textContent = clicks;
-  statSaved.textContent = saved > 999 ? (saved / 1000).toFixed(1) + "k" : saved;
+  const fmtSaved = saved > 999 ? (saved / 1000).toFixed(1) + "k" : saved;
+
+  if (statTotal.textContent !== String(total)) animateValue(statTotal, total);
+  if (statClicks.textContent !== String(clicks))
+    animateValue(statClicks, clicks);
+  if (statSaved.textContent !== String(fmtSaved))
+    animateValue(statSaved, fmtSaved);
 }
 
 /* ── Event listeners ── */
