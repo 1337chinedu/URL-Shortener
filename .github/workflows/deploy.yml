@@ -40,7 +40,7 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             PORT=5000
-            BASE_URL=http://${{ secrets.EC2_HOST }}
+            BASE_URL=https://snipurl.mooo.com
             EOF
 
             # ── Stop old containers, rebuild, start fresh ──
@@ -49,7 +49,7 @@ jobs:
 
             # ── Health check ──
             sleep 5
-            curl -f http://localhost/api/urls && echo "✅ Health check passed" || echo "❌ Health check failed"
+            curl -f http://localhost:5000/api/urls && echo "✅ Health check passed" || echo "❌ Health check failed"
 
             # ── Clean up unused Docker images to save disk space ──
             docker image prune -f

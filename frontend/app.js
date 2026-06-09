@@ -116,7 +116,26 @@ function copyResult() {
   const url = resultUrl.textContent;
   if (!url) return;
 
-  navigator.clipboard.writeText(url).then(() => {
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(() => {
+      copyText.textContent = "Copied!";
+      btnCopy.classList.add("copied");
+      showToast("Copied to clipboard");
+      setTimeout(() => {
+        copyText.textContent = "Copy";
+        btnCopy.classList.remove("copied");
+      }, 2200);
+    });
+  } else {
+    // Fallback for HTTP
+    const el = document.createElement("textarea");
+    el.value = url;
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    document.body.removeChild(el);
     copyText.textContent = "Copied!";
     btnCopy.classList.add("copied");
     showToast("Copied to clipboard");
@@ -124,7 +143,7 @@ function copyResult() {
       copyText.textContent = "Copy";
       btnCopy.classList.remove("copied");
     }, 2200);
-  });
+  }
 }
 
 /* ── Copy any short link from history ── */
