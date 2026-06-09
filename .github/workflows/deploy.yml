@@ -25,15 +25,15 @@ jobs:
           script: |
 
             # ── Clone repo on first deploy, pull on subsequent ones ──
-            if [ ! -d "/home/ubuntu/snip-url" ]; then
-              git clone https://github.com/gregzone/snip-url.git /home/ubuntu/snip-url
+            if [ ! -d "/home/ubuntu/URL-Shortener" ]; then
+              git clone https://github.com/1337chinedu/URL-Shortener.git /home/ubuntu/URL-Shortener
             fi
 
-            cd /home/ubuntu/snip-url
+            cd /home/ubuntu/URL-Shortener
             git pull origin main
 
             # ── Write the .env file from GitHub Secrets ──
-            cat > .env <<'EOF'
+            cat > .env <<EOF
             DB_HOST=db
             DB_PORT=5432
             DB_NAME=${{ secrets.DB_NAME }}
@@ -48,10 +48,10 @@ jobs:
             docker compose up -d --build
 
             # ── Health check ──
-            sleep 5
-            curl -f http://localhost:5000/api/urls && echo "✅ Health check passed" || echo "❌ Health check failed"
+            sleep 10
+            curl -f http://localhost:5000/health && echo "✅ Health check passed" || echo "❌ Health check failed"
 
             # ── Clean up unused Docker images to save disk space ──
             docker image prune -f
 
-            echo "✅ Deployment complete — http://${{ secrets.EC2_HOST }}"
+            echo "✅ Deployment complete — https://snipurl.mooo.com"
